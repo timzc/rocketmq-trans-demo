@@ -1,0 +1,60 @@
+server:
+  port: 8080
+
+spring:
+  redis:
+    cluster:
+      nodes: 148.150.20.130:7000,148.150.20.130:7001,148.150.20.130:7002,148.150.20.130:7003,148.150.20.130:7004,148.150.20.130:7005
+      timeout: 5000
+      max-redirects: 3
+    lettuce:
+      pool:
+        max-active: 8
+        min-idle: 0
+        max-wait: -1ms
+    database: 0
+
+# 使用标准的RocketMQ配置格式
+rocketmq:
+  # 名称服务器地址
+  name-server: 148.150.20.133:9876;148.150.20.134:9876
+  # 各业务集群地址配置
+  product-address: 148.150.20.135:9876;148.150.20.136:9876
+  asset-address: 148.150.20.135:9876;148.150.20.136:9876
+  operation-address: 148.150.20.135:9876;148.150.20.136:9876
+  risk-address: 148.150.20.135:9876;148.150.20.136:9876
+  base-address: 148.150.20.135:9876;148.150.20.136:9876
+  
+  # 生产者配置
+  producer:
+    # 默认生产者组
+    group: PID_PRODUCT_TEST
+    # 发送消息超时时间
+    send-message-timeout: 6000
+    # 业务特有配置
+    enable: true
+    # Topic列表
+    topics: TOPIC_PRODUCT_TEST;TOPIC_ASSET_TEST;TOPIC_RISK_TEST
+    # 每个Topic对应的业务集群类型
+    topic-clusters: product;asset;risk
+    msg-types: normal;normal;normal
+    check-immunity-time-in-seconds: 10;10;10
+  
+  # 消费者配置
+  consumer:
+    enable: true
+    # Topic列表
+    topics: TOPIC_PRODUCT_TEST;TOPIC_ASSET_TEST;TOPIC_RISK_TEST
+    # 每个Topic对应的业务集群类型
+    topic-clusters: product;asset;risk
+    # 消费组IDs (多个组用;分隔)
+    group: CID_PRODUCT_TEST;CID_ASSET_TEST;CID_RISK_TEST
+    # 其他消费者配置
+    msg-types: normal;normal;normal
+    beans: demoMessageConsumer;demoMessageConsumer;demoMessageConsumer
+    init-sub-exps: "*;*;*"
+    subscribe-types: false;false;false
+    suspend-time-millis: 1000;1000;1000
+    max-reconsume-times: 20;20;20
+    consume-thread-nums: 5;5;5
+    consume-timeouts: 15;15;15 

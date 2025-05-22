@@ -1,0 +1,10 @@
+/Users/zhengchi/dev/rocketmq-demo/src/main/java/com/example/rocketmqdemo/controller/MQController.java
+/Users/zhengchi/dev/rocketmq-demo/src/main/java/com/example/rocketmqdemo/config/RedisConfig.java
+/Users/zhengchi/dev/rocketmq-demo/src/main/java/com/example/rocketmqdemo/config/MQInitService.java
+/Users/zhengchi/dev/rocketmq-demo/src/main/java/com/example/rocketmqdemo/config/MQProperties.java
+/Users/zhengchi/dev/rocketmq-demo/src/main/java/com/example/rocketmqdemo/consumer/DemoMessageConsumer.java
+/Users/zhengchi/dev/rocketmq-demo/src/main/java/com/example/rocketmqdemo/RocketMqDemoApplication.java
+/Users/zhengchi/dev/rocketmq-demo/src/main/java/com/example/rocketmqdemo/model/MessageDTO.java
+/Users/zhengchi/dev/rocketmq-demo/src/main/java/com/example/rocketmqdemo/config/RocketMQConfig.java
+/Users/zhengchi/dev/rocketmq-demo/src/main/java/com/example/rocketmqdemo/producer/RocketMQProducer.java
+/Users/zhengchi/dev/rocketmq-demo/src/main/java/com/example/rocketmqdemo/consumer/RocketMQConsumerContainer.java
