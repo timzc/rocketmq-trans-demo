@@ -186,7 +186,11 @@ public class MQController {
             
             result.put("success", true);
             result.put("message", "停止消费者成功");
-            result.put("data", Map.of("consumerGroup", consumerId, "topic", topic));
+            //result.put("data", Map.of("consumerGroup", consumerId, "topic", topic));
+            Map<String, String> data = new HashMap<>();
+            data.put("consumerGroup", consumerId);
+            data.put("topic", topic);
+            result.put("data", data);
         } catch (Exception e) {
             log.error("停止消费者失败", e);
             result.put("success", false);
