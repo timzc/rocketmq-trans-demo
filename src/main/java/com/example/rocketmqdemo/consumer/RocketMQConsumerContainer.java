@@ -24,6 +24,9 @@ public class RocketMQConsumerContainer {
     // 记录已订阅的主题，格式：consumerId_topic_tags
     private final ConcurrentHashMap<String, Boolean> subscribedTopics = new ConcurrentHashMap<>();
     
+    // 记录每个消费者的当前集群状态，key为consumerGroup:topic
+    private final ConcurrentHashMap<String, String> consumerClusterStatus = new ConcurrentHashMap<>();
+    
     @Autowired
     private StringRedisTemplate redisTemplate;
     
@@ -69,6 +72,10 @@ public class RocketMQConsumerContainer {
             String actualCluster = useBusinessCluster ? clusterName : "origin";
             
             log.info("订阅topic: {}, 消费者开关状态: {}, 实际消费集群: {}", topic, useBusinessCluster, actualCluster);
+            
+            // 记录消费者的集群状态
+            String consumerStatusKey = consumerGroup + ":" + topic;
+            consumerClusterStatus.put(consumerStatusKey, actualCluster);
             
             // 创建唯一的消费者标识
             String consumerKey = actualCluster + "_" + consumerGroup + "_" + topic;
@@ -284,6 +291,111 @@ public class RocketMQConsumerContainer {
             log.info("已关闭 consumerGroup: {}, topic: {} 的所有消费者", consumerGroup, topic);
         } catch (Exception e) {
             log.error("关闭消费者时出错, consumerGroup: {}, topic: {}, 错误: {}", 
+                    consumerGroup, topic, e.getMessage(), e);
+        }
+    }
+    
+    /**
+     * 动态切换消费者集群
+     * @param consumerGroup 消费组
+     * @param topic 主题
+     * @param newClusterType 新的集群类型
+     * @param messageListener 消息监听器
+     */
+    public void switchConsumerCluster(String consumerGroup, String topic, String newClusterType, MessageListener messageListener) {
+        String consumerStatusKey = consumerGroup + ":" + topic;
+        String currentCluster = consumerClusterStatus.get(consumerStatusKey);
+        
+        log.info("准备切换消费者集群, consumerGroup: {}, topic: {}, 当前集群: {}, 目标集群: {}", 
+                consumerGroup, topic, currentCluster, newClusterType);
+        
+        try {
+            // 1. 停止当前集群的消费者
+            if (currentCluster != null) {
+                String oldConsumerKey = currentCluster + "_" + consumerGroup + "_" + topic;
+                if (consumerInstances.containsKey(oldConsumerKey)) {
+                    log.info("停止旧消费者: {}", oldConsumerKey);
+                    consumerInstances.get(oldConsumerKey).shutdown();
+                    consumerInstances.remove(oldConsumerKey);
+                    
+                    // 清理相关的订阅记录
+                    for (String key : new ArrayList<>(subscribedTopics.keySet())) {
+                        if (key.startsWith(oldConsumerKey)) {
+                            subscribedTopics.remove(key);
+                        }
+                    }
+                }
+            }
+            
+            // 2. 启动新集群的消费者
+            String newConsumerKey = newClusterType + "_" + consumerGroup + "_" + topic;
+            
+            // 检查新消费者是否已存在
+            if (consumerInstances.containsKey(newConsumerKey)) {
+                log.info("新消费者已存在，无需重复创建: {}", newConsumerKey);
+                consumerClusterStatus.put(consumerStatusKey, newClusterType);
+                return;
+            }
+            
+            // 创建新的消费者实例
+            DefaultMQPushConsumer newConsumer = createNewConsumer(newClusterType, consumerGroup, topic);
+            if (newConsumer == null) {
+                log.error("创建新消费者失败, 集群类型: {}, 消费组: {}", newClusterType, consumerGroup);
+                return;
+            }
+            
+            // 注册消息监听器
+            newConsumer.registerMessageListener(messageListener);
+            log.info("为新消费者注册消息监听器, 集群类型: {}, 消费组: {}", newClusterType, consumerGroup);
+            
+            // 订阅主题
+            newConsumer.subscribe(topic, "*");
+            log.info("新消费者订阅主题成功, topic: {}, 集群类型: {}", topic, newClusterType);
+            
+            // 记录订阅信息
+            String subscribeKey = newConsumerKey + "_*";
+            subscribedTopics.put(subscribeKey, true);
+            
+            // 启动新消费者
+            startConsumer(newConsumer, newConsumerKey);
+            
+            // 更新集群状态记录
+            consumerClusterStatus.put(consumerStatusKey, newClusterType);
+            
+            log.info("消费者集群切换成功, consumerGroup: {}, topic: {}, 新集群: {}", 
+                    consumerGroup, topic, newClusterType);
+                    
+        } catch (Exception e) {
+            log.error("切换消费者集群时发生错误, consumerGroup: {}, topic: {}, 错误: {}", 
+                    consumerGroup, topic, e.getMessage(), e);
+        }
+    }
+    
+    /**
+     * 检查并动态调整消费者集群（根据Redis开关状态）
+     * @param consumerGroup 消费组
+     * @param topic 主题
+     * @param businessClusterType 业务集群类型
+     * @param messageListener 消息监听器
+     */
+    public void checkAndSwitchConsumer(String consumerGroup, String topic, String businessClusterType, MessageListener messageListener) {
+        try {
+            // 获取当前开关状态
+            boolean useBusinessCluster = getConsumerSwitch(consumerGroup, topic);
+            String targetCluster = useBusinessCluster ? businessClusterType : "origin";
+            
+            // 获取当前消费者的集群状态
+            String consumerStatusKey = consumerGroup + ":" + topic;
+            String currentCluster = consumerClusterStatus.get(consumerStatusKey);
+            
+            // 如果目标集群与当前集群不同，则进行切换
+            if (!targetCluster.equals(currentCluster)) {
+                log.info("检测到开关状态变化，准备切换消费者, consumerGroup: {}, topic: {}, 当前: {}, 目标: {}", 
+                        consumerGroup, topic, currentCluster, targetCluster);
+                switchConsumerCluster(consumerGroup, topic, targetCluster, messageListener);
+            }
+        } catch (Exception e) {
+            log.error("检查消费者开关状态时发生错误, consumerGroup: {}, topic: {}, 错误: {}", 
                     consumerGroup, topic, e.getMessage(), e);
         }
     }

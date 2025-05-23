@@ -57,4 +57,15 @@ rocketmq:
     suspend-time-millis: 1000;1000;1000
     max-reconsume-times: 20;20;20
     consume-thread-nums: 5;5;5
-    consume-timeouts: 15;15;15 
+    consume-timeouts: 15;15;15
+  
+  # 监控配置
+  monitor:
+    # 是否启用消费者开关监控
+    enabled: true
+    # 监控检查间隔时间（毫秒），默认30秒
+    check-interval-ms: 30000
+    # 是否在启动时立即执行一次检查
+    initial-check: true
+    # 监控检查的初始延迟时间（毫秒），默认10秒
+    initial-delay-ms: 10000 

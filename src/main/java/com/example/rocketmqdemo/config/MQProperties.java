@@ -2,10 +2,10 @@ package com.example.rocketmqdemo.config;
 
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.context.annotation.Configuration;
+import org.springframework.stereotype.Component;
 
 @Data
-@Configuration
+@Component("mqProperties")
 @ConfigurationProperties(prefix = "rocketmq")
 public class MQProperties {
     private String nameServer;
@@ -25,6 +25,7 @@ public class MQProperties {
     
     private Producer producer;
     private Consumer consumer;
+    private Monitor monitor;
     
     @Data
     public static class Producer {
@@ -101,5 +102,20 @@ public class MQProperties {
         public void setMsgTypes(String msgTypes) {
             this.msgTypes = msgTypes;
         }
+    }
+    
+    @Data
+    public static class Monitor {
+        // 是否启用消费者开关监控
+        private boolean enabled = true;
+        
+        // 监控检查间隔时间（毫秒），默认30秒
+        private long checkIntervalMs = 30000;
+        
+        // 是否在启动时立即执行一次检查
+        private boolean initialCheck = true;
+        
+        // 监控检查的初始延迟时间（毫秒），默认10秒
+        private long initialDelayMs = 10000;
     }
 } 

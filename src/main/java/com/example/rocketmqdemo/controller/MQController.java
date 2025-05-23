@@ -3,6 +3,7 @@ package com.example.rocketmqdemo.controller;
 import com.example.rocketmqdemo.consumer.RocketMQConsumerContainer;
 import com.example.rocketmqdemo.model.MessageDTO;
 import com.example.rocketmqdemo.producer.RocketMQProducer;
+import com.example.rocketmqdemo.config.ConsumerSwitchMonitor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -22,6 +23,9 @@ public class MQController {
     
     @Autowired
     private RocketMQConsumerContainer consumerContainer;
+    
+    @Autowired
+    private ConsumerSwitchMonitor consumerSwitchMonitor;
     
     /**
      * 发送消息
@@ -195,6 +199,85 @@ public class MQController {
             log.error("停止消费者失败", e);
             result.put("success", false);
             result.put("message", "停止消费者失败: " + e.getMessage());
+        }
+        
+        return result;
+    }
+    
+    /**
+     * 手动触发消费者开关检查
+     */
+    @PostMapping("/consumer/check-switch")
+    public Map<String, Object> triggerConsumerSwitchCheck() {
+        Map<String, Object> result = new HashMap<>();
+        
+        try {
+            consumerSwitchMonitor.triggerManualCheck();
+            
+            result.put("success", true);
+            result.put("message", "手动触发消费者开关检查成功");
+        } catch (Exception e) {
+            log.error("手动触发消费者开关检查失败", e);
+            result.put("success", false);
+            result.put("message", "手动触发消费者开关检查失败: " + e.getMessage());
+        }
+        
+        return result;
+    }
+    
+    /**
+     * 启用/禁用消费者开关监控
+     */
+    @PostMapping("/consumer/monitor")
+    public Map<String, Object> setConsumerMonitor(@RequestParam boolean enabled) {
+        Map<String, Object> result = new HashMap<>();
+        
+        try {
+            if (enabled) {
+                consumerSwitchMonitor.enableMonitor();
+            } else {
+                consumerSwitchMonitor.disableMonitor();
+            }
+            
+            result.put("success", true);
+            result.put("message", enabled ? "启用消费者监控成功" : "禁用消费者监控成功");
+            result.put("data", enabled);
+        } catch (Exception e) {
+            log.error("设置消费者监控状态失败", e);
+            result.put("success", false);
+            result.put("message", "设置消费者监控状态失败: " + e.getMessage());
+        }
+        
+        return result;
+    }
+    
+    /**
+     * 获取消费者监控状态
+     */
+    @GetMapping("/consumer/monitor")
+    public Map<String, Object> getConsumerMonitorStatus() {
+        Map<String, Object> result = new HashMap<>();
+        
+        try {
+            boolean enabled = consumerSwitchMonitor.isMonitorEnabled();
+            long checkInterval = consumerSwitchMonitor.getCheckInterval();
+            
+            result.put("success", true);
+            result.put("message", "获取消费者监控状态成功");
+            // result.put("data", Map.of(
+            //     "enabled", enabled,
+            //     "checkIntervalMs", checkInterval,
+            //     "checkIntervalSeconds", checkInterval / 1000
+            // ));
+            Map<String, Object> data = new HashMap<>();
+            data.put("enabled", enabled);
+            data.put("checkIntervalMs", checkInterval);
+            data.put("checkIntervalSeconds", checkInterval / 1000);
+            result.put("data", data);
+        } catch (Exception e) {
+            log.error("获取消费者监控状态失败", e);
+            result.put("success", false);
+            result.put("message", "获取消费者监控状态失败: " + e.getMessage());
         }
         
         return result;
